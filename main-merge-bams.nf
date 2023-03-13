@@ -2,6 +2,7 @@
 
 params.samples_file = '/net/seq/data/projects/regulotyping-h.CD3+/metadata.txt'
 params.genome='/net/seq/data/genomes/human/GRCh38/noalts/GRCh38_no_alts'
+params.genome_fasta_file = "/net/seq/data/genomes/human/GRCh38/noalts/GRCh38_no_alts.fa"
 
 //Build cell-type specific indicies as well as a combined index
 params.build_ct_index = 1 
@@ -28,6 +29,8 @@ process merge_bamfiles {
 
 	publishDir params.outdir + '/merged', mode: 'symlink' 
 
+        module "samtools/1.14"
+
 	cpus 2
 
 	input:
@@ -38,7 +41,7 @@ process merge_bamfiles {
 
 	script:
 	"""
-	samtools merge -f -@${task.cpus} ${indiv_id}_${cell_type}.bam ${bam_files}
+	samtools merge -f -@${task.cpus} --reference ${params.genome_fasta_file} ${indiv_id}_${cell_type}.bam ${bam_files}
 	samtools index ${indiv_id}_${cell_type}.bam
 	"""
 }	
