@@ -49,7 +49,7 @@ process call_hotspots {
 	// only publish varw_peaks and hotspots
 	publishDir params.outdir + '/hotspots', mode: 'copy'
 
-	module "bedops/2.4.35-typical:modwt/1.0"
+	module "bedops/2.4.35-typical:modwt/1.0:kentutil/388"
 
 	input:
 	file 'nuclear_chroms.txt' from file("${nuclear_chroms}")
@@ -80,15 +80,15 @@ process call_hotspots {
 	| samtools reheader \${TMPDIR}/header.txt - \
 	> \${TMPDIR}/nuclear.bam
 
-	PATH=/home/jvierstra/.local/src/hotspot2/bin:\$PATH
-	PATH=/home/jvierstra/.local/src/hotspot2/scripts:\$PATH
+	export PATH=/home/jvierstra/.local/src/hotspot2/bin:\$PATH
+	export PATH=/home/jvierstra/.local/src/hotspot2/scripts:\$PATH
 
 	hotspot2.sh -F 0.05 -f 0.05 -p varWidth_20_${indiv_id}_${cell_type} \
 		-M mappable.bed \
-    	-c chrom_sizes.bed \
-    	-C centers.starch \
-    	\${TMPDIR}/nuclear.bam \
-    	peaks
+		-c chrom_sizes.bed \
+		-C centers.starch \
+		\${TMPDIR}/nuclear.bam \
+		peaks
 
 	cd peaks
 
