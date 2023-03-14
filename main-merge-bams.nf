@@ -177,8 +177,8 @@ PEAK_INDEX_FILES = params.build_ct_index ? PEAK_FILES_ALL.concat(PEAK_FILES_BY_C
 process build_index {
 	tag "${cell_type}"
 	
-	module "R/4.0.5"
-	module "bedops/2.4.35-typical"
+	module "R/4.0.5:bedops/2.4.35-typical:kentutil/388"
+	// R module should have caTools package installed
 
 	publishDir params.outdir + '/index', mode: 'copy' 
 
@@ -195,7 +195,7 @@ process build_index {
 	ls *.varw_peaks.fdr0.001.starch > filelist.txt
 
 	/home/jvierstra/.local/src/Index/run_sequential.sh \
-		\${PWD} \
+		\$(pwd) \
 		${chrom_sizes} \
 		filelist.txt \
 		${cell_type}
