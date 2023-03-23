@@ -52,7 +52,7 @@ process call_hotspots {
 	// only publish varw_peaks and hotspots
 	publishDir params.outdir + '/hotspots', mode: 'copy'
 
-	module "bedops/2.4.35-typical:modwt/1.0:kentutil/388"
+	module "modwt/1.0:kentutil/302:bedops/2.4.35-typical:bedtools/2.25.0:hotspot2/2.1.1:samtools/1.3"
 
 	input:
 	file 'nuclear_chroms.txt' from file("${nuclear_chroms}")
@@ -83,9 +83,6 @@ process call_hotspots {
 	| samtools reheader \${TMPDIR}/header.txt - \
 	> \${TMPDIR}/nuclear.bam
 
-	export PATH=/home/jvierstra/.local/src/hotspot2/bin:\$PATH
-	export PATH=/home/jvierstra/.local/src/hotspot2/scripts:\$PATH
-
 	hotspot2.sh -F 0.05 -f 0.05 -p varWidth_20_${indiv_id}_${cell_type} \
 		-M mappable.bed \
 		-c chrom_sizes.bed \
@@ -112,7 +109,7 @@ process call_hotspots {
 	cp nuclear.varw_peaks.fdr0.001.starch ../${indiv_id}_${cell_type}.varw_peaks.fdr0.001.starch
 	cp nuclear.hotspots.fdr0.05.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.05.starch
 	cp nuclear.hotspots.fdr0.001.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.001.starch
-	cp nuclear.SPOT.fdr0.05.txt ../${indiv_id}_${cell_type}.SPOT.fdr0.05.txt
+	cp nuclear.SPOT.txt ../${indiv_id}_${cell_type}.SPOT.txt
 
 	tagcounts=\$(samtools view -c \${TMPDIR}/nuclear.bam)
 	echo "tagcounts = \${tagcounts}"
