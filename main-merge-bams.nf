@@ -147,6 +147,7 @@ process call_hotspots {
 
 	wigToBigWig -clip \${TMPDIR}/normalized.density.wig ../chrom_sizes.txt ../${indiv_id}_${cell_type}.normalized.density.bw
 
+	rm -r \${TMPDIR}
 	"""
 }
 
