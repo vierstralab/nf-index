@@ -29,7 +29,7 @@ process merge_bamfiles {
 
 	publishDir params.outdir + '/merged', mode: 'symlink' 
 
-        module "samtools/1.14"
+        module "samtools/1.3"
 
 	cpus 2
 
