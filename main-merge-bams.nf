@@ -52,7 +52,7 @@ process call_hotspots {
 	// only publish varw_peaks and hotspots
 	publishDir params.outdir + '/hotspots', mode: 'copy'
 
-	module "modwt/1.0:kentutil/302:bedops/2.4.35-typical:bedtools/2.25.0:hotspot2/2.1.1:samtools/1.3"
+	module "modwt/1.0:kentutil/302:bedops/2.4.35-typical:bedtools/2.25.0:hotspot2/2.1.2:samtools/1.3"
 
 	input:
 	file 'nuclear_chroms.txt' from file("${nuclear_chroms}")
