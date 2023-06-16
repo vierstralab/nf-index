@@ -66,7 +66,7 @@ process call_hotspots {
 	output:
 	set val(indiv_id), val(cell_type), file(bam_file), file(bam_index_file), file("${indiv_id}_${cell_type}.varw_peaks.fdr0.001.starch") into PEAKS
 	file("${indiv_id}_${cell_type}.hotspots.fdr*.starch")
-	file("${indiv_id}_${cell_type}.SPOT.txt")
+	file("${indiv_id}_${cell_type}.SPOT.fdr0.05.txt")
 	file("${indiv_id}_${cell_type}.normalized.density.starch")
 	file("${indiv_id}_${cell_type}.normalized.density.bw")
 
@@ -109,7 +109,7 @@ process call_hotspots {
 	cp nuclear.varw_peaks.fdr0.001.starch ../${indiv_id}_${cell_type}.varw_peaks.fdr0.001.starch
 	cp nuclear.hotspots.fdr0.05.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.05.starch
 	cp nuclear.hotspots.fdr0.001.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.001.starch
-	cp nuclear.SPOT.txt ../${indiv_id}_${cell_type}.SPOT.txt
+	cp nuclear.SPOT.fdr0.05.txt ../${indiv_id}_${cell_type}.SPOT.fdr0.05.txt
 
 	tagcounts=\$(samtools view -c \${TMPDIR}/nuclear.bam)
 	echo "tagcounts = \${tagcounts}"
