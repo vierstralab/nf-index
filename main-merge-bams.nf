@@ -213,6 +213,7 @@ process count_tags {
 	tag "${index_id}:${indiv_id}:${cell_type}"
 	
 	conda '/home/jvierstra/.local/miniconda3/envs/py3.9_default'
+	module "bedops/2.4.35-typical"
 
 	publishDir params.outdir + '/counts', mode: 'symlink'
 
