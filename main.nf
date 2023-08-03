@@ -9,7 +9,8 @@ params.build_ct_index = 1
 params.outdir='output'
 
 nuclear_chroms="$params.genome" + ".nuclear.txt"
-chrom_sizes="$params.genome"  + ".chrom_sizes.bed"
+chrom_sizes="$params.genome"  + ".chrom_sizes"
+chrom_sizes_bed="$params.genome"  + ".chrom_sizes.bed"
 mappable="$params.genome" + ".K76.mappable_only.bed"
 centers="$params.genome" + ".K76.center_sites.n100.nuclear.starch"
 
@@ -25,7 +26,7 @@ process call_hotspots {
 	tag "${indiv_id}:${cell_type}"
 
 	// only publish varw_peaks and hotspots
-	publishDir params.outdir + '/hotspots', mode: 'symlink', pattern: "*.starch" 
+	publishDir params.outdir + '/hotspots', mode: 'symlink'
 
 	module "bedops/2.4.35-typical:modwt/1.0"
 
@@ -34,7 +35,8 @@ process call_hotspots {
 	input:
 	file 'nuclear_chroms.txt' from file("${nuclear_chroms}")
 	file 'mappable.bed' from file("${mappable}")
-	file 'chrom_sizes.bed' from file("${chrom_sizes}")
+	file 'chrom_sizes.txt' from file("${chrom_sizes}")
+	file 'chrom_sizes.bed' from file("${chrom_sizes_bed}")
 	file 'centers.starch' from file("${centers}")
 
 	set val(indiv_id), val(cell_type), val(bam_file) from BAMS_HOTSPOTS
@@ -42,10 +44,12 @@ process call_hotspots {
 	output:
 	set val(indiv_id), val(cell_type), val(bam_file), file("${indiv_id}_${cell_type}.varw_peaks.fdr0.001.starch") into PEAKS
 	file("${indiv_id}_${cell_type}.hotspots.fdr*.starch")
+	file("${indiv_id}_${cell_type}.SPOT.fdr0.05.txt")
+	file("${indiv_id}_${cell_type}.normalized.density.starch")
+	file("${indiv_id}_${cell_type}.normalized.density.bw")
 
 	script:
 	"""
-
 	TMPDIR=\$(mktemp -d)
 
 	samtools view -H ${bam_file} > \${TMPDIR}/header.txt
@@ -81,10 +85,43 @@ process call_hotspots {
 		nuclear.varw_peaks.fdr0.001.starch \
 		\$(cat nuclear.cleavage.total)
 
-		cp nuclear.varw_peaks.fdr0.001.starch ../${indiv_id}_${cell_type}.varw_peaks.fdr0.001.starch
-    
-    	cp nuclear.hotspots.fdr0.05.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.05.starch
-    	cp nuclear.hotspots.fdr0.001.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.001.starch
+	cp nuclear.varw_peaks.fdr0.001.starch ../${indiv_id}_${cell_type}.varw_peaks.fdr0.001.starch
+	cp nuclear.hotspots.fdr0.05.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.05.starch
+	cp nuclear.hotspots.fdr0.001.starch ../${indiv_id}_${cell_type}.hotspots.fdr0.001.starch
+	cp nuclear.SPOT.fdr0.05.txt ../${indiv_id}_${cell_type}.SPOT.fdr0.05.txt
+
+	unstarch nuclear.density.starch \
+		| awk -v tagcount=\$(samtools view -c \${TMPDIR}/nuclear.bam) \
+		      -v scale=1000000 \
+			  -v OFS="\t" \
+			  '{ z=\$5; n=(z/tagcount)*scale; print \$1, \$2, \$3, \$4, n }' \
+		| starch - \
+	> ../${indiv_id}_${cell_type}.normalized.density.starch
+
+	unstarch ../${indiv_id}_${cell_type}.normalized.density.starch \
+		| awk -v OFS="\t" \
+			  -v bin=20 \
+			  'BEGIN { \
+				  chr=""; \
+				} \
+				{ \
+					if( \$5 != 0 && \$2 != 0 ){ \
+						if( chr=="" ) { \
+							chr=\$1; \
+							print "variableStep chrom=" chr " span=" bin; \
+						} \
+						if( \$1==chr ){ \
+							print \$2, \$5; \
+						} else { \
+							chr=\$1; \
+							print "variableStep chrom=" chr " span=" bin; \
+							print \$2, \$5; \
+						} \
+					} \
+				}' \
+	> \${TMPDIR}/normalized.density.wig
+
+	wigToBigWig -clip \${TMPDIR}/normalized.density.wig ../chrom_sizes.txt ../${indiv_id}_${cell_type}.normalized.density.bw
 
 	rm -rf \${TMPDIR}
 	"""
@@ -112,7 +149,7 @@ process build_index {
 
 	input:
 	set val(cell_type), file('*') from PEAK_INDEX_FILES
-	file chrom_sizes from file("${chrom_sizes}")
+	file chrom_sizes from file("${chrom_sizes_bed}")
 
 	output:
 	file "masterlist*"
