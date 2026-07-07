@@ -17,8 +17,13 @@ process collate_and_chunk {
 
     script:
     """
-    for f in peaks/*; 
-        do zcat \$f \
+    for f in peaks/*; do
+        case "\$f" in
+            *.gz) reader=zcat ;;
+            *)    reader=cat  ;;
+        esac
+
+        \$reader \$f \
             | cut -f1-7 \
             | grep -v '#chr' >> tmp.bed;
     done
