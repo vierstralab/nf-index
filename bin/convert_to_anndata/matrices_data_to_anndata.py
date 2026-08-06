@@ -15,11 +15,6 @@ def main(adata: ad.AnnData, matrices):
 
     add_matrices_to_anndata(adata, matrices_mapping)
 
-    if 'X' in adata:
-        n_peaks = adata.X.sum(axis=1)
-        if sp.issparse(adata.X):
-            n_peaks = n_peaks.A1
-        adata.obs['n_peaks'] = n_peaks
     return adata
 
 
