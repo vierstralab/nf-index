@@ -6,7 +6,7 @@ import anndata as ad
 from scipy import sparse as sp
 
 
-def main(adata, matrices):
+def main(adata: ad.AnnData, matrices):
     matrices_types = [
         'counts', 'binary', 'density',
         'mean_bg_agg_cutcounts', 'neglog10_pvals'
@@ -15,10 +15,11 @@ def main(adata, matrices):
 
     add_matrices_to_anndata(adata, matrices_mapping)
 
-    n_peaks = adata.X.sum(axis=1)
-    if sp.issparse(adata.X):
-        n_peaks = n_peaks.A1
-    adata.obs['n_peaks'] = n_peaks
+    if 'X' in adata:
+        n_peaks = adata.X.sum(axis=1)
+        if sp.issparse(adata.X):
+            n_peaks = n_peaks.A1
+        adata.obs['n_peaks'] = n_peaks
     return adata
 
 
