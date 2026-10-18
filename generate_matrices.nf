@@ -406,8 +406,6 @@ workflow extractDataWithOffsets {
 }
 
 
-////////////////////// DEFUNC  //////////////////////
-
 workflow extractDensityAtSummit {
     println "Extracting normalized density at summits from ${params.index_anndata}"
     data = Channel.of(params.index_anndata)
@@ -429,11 +427,11 @@ workflow extractDensityAtSummit {
         | combine(summits_masterlist.map(it -> it[1])) // inverse_argsort
         | restore_masterlist_order
         | groupTuple()
-        | combine(data.map(it -> it[2])) // suffix, column, samples_order
+        | combine(data.map(it -> it[2])) // suffix, columns, samples_order
         | generate_matrix
 }
 
-
+////////////////////// DEFUNC  //////////////////////
 workflow extractBGParams {
     println "Extracting bg params at ${params.reference_bed}"
     reference_bed = Channel.fromPath(params.reference_bed)
