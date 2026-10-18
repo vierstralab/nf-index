@@ -34,7 +34,7 @@ process apply_jitter {
     tag "${sample_id}"
 
     input:
-        tuple path(masterlist), val(sample_id)
+        tuple path(masterlist), val(sample_id), path(jitter_matrix)
     
     output:
         tuple val(sample_id), path(name), path(inverse_argsort)
@@ -46,7 +46,7 @@ process apply_jitter {
     python3 $moduleDir/bin/helpers/apply_jitter.py \
         ${masterlist} \
         ${sample_id} \
-        ${params.jitter_matrix} \
+        ${jitter_matrix} \
         ${name} \
         ${inverse_argsort}
     """
@@ -354,7 +354,7 @@ workflow generateMatricesFromAnndata {
 // main workflow 
 workflow {
     bams_hotspots = Channel.fromPath(params.samples_file)
-        | splitCsv(header:true, sep:'\t')
+        | splitCsv(header: true, sep: '\t')
         | map(row -> tuple(
             row.sample_id,
             file(row.cram_file),
@@ -374,18 +374,20 @@ workflow extractDataWithOffsets {
         | extract_meta_from_anndata // masterlist, saf_masterlist, samples_order, samples_meta
     
     samples_meta = Channel.fromPath(params.samples_file)
-        | splitCsv(header:true, sep:'\t')
+        | splitCsv(header: true, sep: '\t')
         | map(row -> tuple(
             row.sample_id,
             file(row.hotspot3_fit_stats_file),
             file(row.normalized_density_bw),
         ))
 
-    
+    jitter_matrix = Channel.fromPath(params.jitter_matrix)
+
     summits_masterlist = data
         | map(it -> it[0])
         | first() // masterlist
         | combine(samples_meta.map(it -> it[0])) // masterlist, sample_id
+        | combine(jitter_matrix) // masterlist, sample_id, jitter matrix
         | apply_jitter // summits_masterlist, inverse_argsort
 
     samples_order = data
@@ -404,7 +406,7 @@ workflow extractDataWithOffsets {
 }
 
 
-////////////////////// DEFUNC  /////////////
+////////////////////// DEFUNC  //////////////////////
 
 workflow extractDensityAtSummit {
     println "Extracting normalized density at summits from ${params.index_anndata}"
@@ -416,7 +418,7 @@ workflow extractDensityAtSummit {
         | convert_regions_to_summits // summits_masterlist, inverse_argsort
 
     samples_meta = Channel.fromPath(params.samples_file)
-        | splitCsv(header:true, sep:'\t')
+        | splitCsv(header: true, sep: '\t')
         | map(row -> tuple(
             row.sample_id,
             file(row.normalized_density_bw)
@@ -436,7 +438,7 @@ workflow extractBGParams {
     println "Extracting bg params at ${params.reference_bed}"
     reference_bed = Channel.fromPath(params.reference_bed)
     samples_meta = Channel.fromPath(params.samples_file)
-        | splitCsv(header:true, sep:'\t')
+        | splitCsv(header: true, sep: '\t')
         | map(row -> tuple(
             row.sample_id,
             file(row.peak_stats),
