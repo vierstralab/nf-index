@@ -13,23 +13,25 @@ masterlist = pd.read_table(
 
 sample_id = sys.argv[2]
 
+jitters = np.load(sys.argv[3], mmap_mode='r')[sample_id]
+dhs_idx = jitters[:, 0]
+jitter_offsets = jitters[:, 1]
 
-jitters = np.load(sys.argv[3], mmap_mode='r')
+# keep only the DHSs sampled for this sample_id, drop the rest
+sampled_masterlist = masterlist.iloc[dhs_idx].copy()
+sampled_masterlist['summit'] += jitter_offsets.astype(int)
 
-jitter_offsets = jitters[sample_id]
+sampled_masterlist['start'] = sampled_masterlist['summit'].astype(int)
+sampled_masterlist['end'] = sampled_masterlist['start'] + 1
 
-masterlist['summit'] += jitter_offsets.astype(int)
+sampled_masterlist = sampled_masterlist.sort_values(['chrom', 'start', 'end'])
 
-masterlist['start'] = masterlist['summit'].astype(int)
-masterlist['end'] = masterlist['start'] + 1
-
-masterlist = masterlist.sort_values(['chrom', 'start', 'end'])
-
-masterlist[['chrom', 'start', 'end', 'dhs_id', 'summit']].to_csv(
+sampled_masterlist[['chrom', 'start', 'end', 'dhs_id', 'summit']].to_csv(
     sys.argv[4],
     sep='\t',
     header=False,
     index=False,
 )
 
-np.savetxt(sys.argv[5], masterlist.index.to_numpy(), fmt="%d")
+# original masterlist row index for each row of the sorted bed above, for scattering results back
+np.savetxt(sys.argv[5], sampled_masterlist.index.to_numpy(), fmt="%d")

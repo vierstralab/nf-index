@@ -2,6 +2,9 @@ import sys
 import numpy as np
 
 np_array = np.load(sys.argv[1])
-argsort = np.loadtxt(sys.argv[2], dtype=int)
-restored_array = np_array[argsort]
-np.save(sys.argv[3], restored_array)
+orig_idx = np.atleast_1d(np.loadtxt(sys.argv[2], dtype=int))
+n_dhs = int(sys.argv[3])
+
+restored = np.zeros(n_dhs, dtype=np_array.dtype)
+restored[orig_idx] = np_array
+np.save(sys.argv[4], restored)

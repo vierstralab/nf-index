@@ -11,64 +11,42 @@ process convert_regions_to_summits {
 
     input:
         path masterlist
-    
+
     output:
-        tuple path(summit_masterlist), path(inverse_argsort)
-    
+        tuple path(summit_masterlist), path(orig_idx)
+
     script:
     summit_masterlist = "masterlist.summits.bed"
-    inverse_argsort = "masterlist.summits.inverse_argsort.txt"
+    orig_idx = "masterlist.summits.orig_idx.txt"
     """
     awk -F'\t' -v OFS='\t' \
         '{ print \$1, \$5, \$5 + 1, \$4, NR }' ${masterlist} \
         | sort-bed - > ${summit_masterlist}
 
-    cat ${summit_masterlist} \
-        | awk '{print NR, \$NF}' \
-        | sort -k2,2n | awk '{print \$1 - 1}' > ${inverse_argsort}
+    awk '{print \$NF - 1}' ${summit_masterlist} > ${orig_idx}
     """
 }
 
-process apply_jitter {
-    conda params.conda
-    tag "${sample_id}"
-
-    input:
-        tuple path(masterlist), val(sample_id), path(jitter_matrix)
-    
-    output:
-        tuple val(sample_id), path(name), path(inverse_argsort)
-    
-    script:
-    name = "${sample_id}.jittered_masterlist.bed"
-    inverse_argsort = "${sample_id}.jittered_masterlist.inverse_argsort.txt"
-    """
-    python3 $moduleDir/bin/helpers/apply_jitter.py \
-        ${masterlist} \
-        ${sample_id} \
-        ${jitter_matrix} \
-        ${name} \
-        ${inverse_argsort}
-    """
-}
-
+// Scatters a np_array (values for a subset or all of the masterlist, in orig_idx's order)
+// back into a full-length n_dhs array, filling positions absent from orig_idx with 0.
 process restore_masterlist_order {
 
     conda params.conda
     tag "${prefix}"
 
     input:
-        tuple val(prefix), path(np_array, name: "input/*"), path(inverse_argsort)
-    
+        tuple val(prefix), path(np_array), path(orig_idx), val(n_dhs)
+
     output:
         tuple val(prefix), path(name)
-    
+
     script:
-    name = np_array.name
+    name = "${prefix}.npy"
     """
     python3 $moduleDir/bin/helpers/restore_masterlist_order.py \
         ${np_array} \
-        ${inverse_argsort} \
+        ${orig_idx} \
+        ${n_dhs} \
         ${name}
     """
 }
@@ -254,10 +232,11 @@ process generate_matrix {
 
  workflow getSummitBasedColumns {
     take:
-        data // sample_id, bg_params_tabix, density_bw, masterlist, inverse_argsort
+        data // sample_id, bg_params_tabix, density_bw, masterlist, orig_idx
+        n_dhs
     main:
-        inverse_argsort = data
-            | map(it -> tuple(it[0], it[4])) // sample_id, inverse_argsort
+        orig_idx = data
+            | map(it -> tuple(it[0], it[4])) // sample_id, orig_idx
 
         density_cols = data
             | map(it -> tuple(it[3], it[0], it[2])) // masterlist, sample_id, density_bw
@@ -266,11 +245,12 @@ process generate_matrix {
         summit_based_cols = data
             | map(it -> tuple(it[3], it[0], it[1])) // masterlist, sample_id, bg_params_tabix
             | extract_bg_mean // sample_id, suffix, np_array
-            | mix(density_cols) 
-            | combine(inverse_argsort, by: 0) // sample_id, suffix, np_array, inverse_argsort
-            | map(it -> tuple(it[1], it[2], it[3])) // suffix, np_array, inverse_argsort
+            | mix(density_cols)
+            | combine(orig_idx, by: 0) // sample_id, suffix, np_array, orig_idx
+            | map(it -> tuple(it[1], it[2], it[3])) // suffix, np_array, orig_idx
+            | combine(n_dhs) // suffix, np_array, orig_idx, n_dhs
             | restore_masterlist_order
-    
+
     emit:
         summit_based_cols
  }
@@ -294,23 +274,29 @@ workflow generateMatrices {
             | extract_max_pval
 
         // Summit based extraction
-        summits_masterlist = data
+        masterlist = data
             | map(it -> it[0])
             | first()
-            | convert_regions_to_summits // summits_masterlist, inverse_argsort
+
+        n_dhs = masterlist.countLines().toInteger()
+
+        summits_masterlist = masterlist
+            | convert_regions_to_summits // summits_masterlist, orig_idx
 
         samples_order = data
             | map(it -> it[1])
             | first()
-        
+
         samples_masterlists = data
             | map(it -> it[3])
             | combine(summits_masterlist)
 
-        summit_based_cols = data
-            | map(it -> tuple(it[3], it[8], it[7])) // sample_id, bg_params_tabix, density_bw
-            | join(samples_masterlists) // sample_id, bg_params_tabix, density_bw, summits_masterlist, inverse_argsort
-            | getSummitBasedColumns
+        summit_based_cols = getSummitBasedColumns(
+            data
+                | map(it -> tuple(it[3], it[8], it[7])) // sample_id, bg_params_tabix, density_bw
+                | join(samples_masterlists), // sample_id, bg_params_tabix, density_bw, summits_masterlist, orig_idx
+            n_dhs
+        )
 
         out = binary_cols
             | mix(count_cols)
@@ -368,52 +354,18 @@ workflow {
 }
 
 
-workflow extractDataWithOffsets {
-    println "Extracting data with offsets from ${params.index_anndata}"
-    data = Channel.of(params.index_anndata)
-        | extract_meta_from_anndata // masterlist, saf_masterlist, samples_order, samples_meta
-    
-    samples_meta = Channel.fromPath(params.samples_file)
-        | splitCsv(header: true, sep: '\t')
-        | map(row -> tuple(
-            row.sample_id,
-            file(row.hotspot3_fit_stats_file),
-            file(row.normalized_density_bw),
-        ))
-
-    jitter_matrix = Channel.fromPath(params.jitter_matrix)
-
-    summits_masterlist = data
-        | map(it -> it[0])
-        | first() // masterlist
-        | combine(samples_meta.map(it -> it[0])) // masterlist, sample_id
-        | combine(jitter_matrix) // masterlist, sample_id, jitter matrix
-        | apply_jitter // summits_masterlist, inverse_argsort
-
-    samples_order = data
-        | map(it -> it[2])
-        | first()
-
-
-    samples_meta
-        | join(summits_masterlist)
-        | getSummitBasedColumns
-        | combine(samples_order.countLines().toInteger())
-        | map(it -> tuple(groupKey(it[0], it[2]), it[1]))
-        | groupTuple(by: 0) // suffix, columns
-        | combine(samples_order) // suffix, columns, samples_order
-        | generate_matrix
-}
-
-
 workflow extractDensityAtSummit {
     println "Extracting normalized density at summits from ${params.index_anndata}"
     data = Channel.of(params.index_anndata)
         | extract_meta_from_anndata // masterlist , saf_masterlist, samples_order, samples_meta
     
-    summits_masterlist = data
+    masterlist = data
         | map(it -> it[0])
-        | convert_regions_to_summits // summits_masterlist, inverse_argsort
+
+    n_dhs = masterlist.countLines().toInteger()
+
+    summits_masterlist = masterlist
+        | convert_regions_to_summits // summits_masterlist, orig_idx
 
     samples_meta = Channel.fromPath(params.samples_file)
         | splitCsv(header: true, sep: '\t')
@@ -423,13 +375,16 @@ workflow extractDensityAtSummit {
         ))
         | combine(summits_masterlist.map(it -> it[0])) // summits_masterlist
         | map(it -> tuple(it[2], it[0], it[1]))
-        | extract_max_density
-        | combine(summits_masterlist.map(it -> it[1])) // inverse_argsort
+        | extract_max_density // sample_id, suffix, np_array
+        | map(it -> tuple(it[1], it[2])) // suffix, np_array
+        | combine(summits_masterlist.map(it -> it[1])) // suffix, np_array, orig_idx
+        | combine(n_dhs) // suffix, np_array, orig_idx, n_dhs
         | restore_masterlist_order
         | groupTuple()
         | combine(data.map(it -> it[2])) // suffix, columns, samples_order
         | generate_matrix
 }
+
 
 ////////////////////// DEFUNC  //////////////////////
 workflow extractBGParams {
