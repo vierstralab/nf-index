@@ -35,13 +35,13 @@ process restore_masterlist_order {
     tag "${prefix}"
 
     input:
-        tuple val(prefix), path(np_array), path(orig_idx), val(n_dhs)
+        tuple val(prefix), path(np_array, name: "input/*"), path(inverse_argsort)
 
     output:
         tuple val(prefix), path(name)
 
     script:
-    name = "${prefix}.npy"
+    name = np_array.name
     """
     python3 $moduleDir/bin/helpers/restore_masterlist_order.py \
         ${np_array} \
