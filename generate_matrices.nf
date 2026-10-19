@@ -52,7 +52,6 @@ process restore_masterlist_order {
 }
 
 
-// Processes below create a np array of shape n_dhs x 1
 process project_peak_calls {
     conda params.conda
     tag "${sample_id}"
@@ -151,7 +150,7 @@ process count_tags {
 
 process extract_max_pval {
     tag "${sample_id}"
-    conda "/home/sabramov/miniconda3/envs/hotspot3"
+    conda params.conda
 
     input:
         tuple path(masterlist), val(sample_id), path(pvals_parquet)
