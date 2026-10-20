@@ -98,12 +98,7 @@ workflow extractDataWithOffsets {
                 )
             )
             | combine(samples_order) // suffix, columns, samples_order
-            // | generate_matrix
-
-            // FIXME make the code work to collect matrices:
-            // // sample_id, jitter_id, column, n_samples
-            // | map(it -> tuple(groupKey(it[0], it[2]), it[1])) 
-            // | groupTuple(by: 0) // suffix, columns
+            | generate_matrix
 
     emit:
         out
