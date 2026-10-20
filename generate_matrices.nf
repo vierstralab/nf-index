@@ -35,7 +35,7 @@ process restore_masterlist_order {
     tag "${prefix}"
 
     input:
-        tuple val(sample_id), val(prefix), path(np_array, name: "input/*"), path(inverse_argsort)
+        tuple val(sample_id), val(prefix), path(np_array, name: "input/*"), path(orig_idx)
 
     output:
         tuple val(sample_id), val(prefix), path(name)
