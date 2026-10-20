@@ -306,9 +306,9 @@ workflow generateMatrices {
             | map(it -> tuple(groupKey(it[0], it[2]), it[1]))
             | groupTuple(by: 0) // suffix, columns
             | combine(samples_order) // suffix, columns, samples_order
-            | generate_matrix
+            | generate_matrix // matrix_name, matrix
     emit:
-        out
+        out // matrix_name, matrix
 }
 
 
