@@ -15,7 +15,7 @@ process apply_jitter {
         tuple path(masterlist), val(sample_id), val(jitter_id), path(jitter_matrix)
 
     output:
-        tuple val(prefix), path(name), path(orig_idx)
+        tuple val(sample_id), val(prefix), path(name), path(orig_idx)
 
     script:
     prefix = "${sample_id}-${jitter_id}"
@@ -66,22 +66,22 @@ workflow extractDataWithOffsets {
         jittered_masterlists = masterlist
             | combine(samples_meta.map(it -> it[0])) // masterlist, sample_id
             | combine(data.map(it -> tuple(it[0], it[1]))) // masterlist, sample_id, jitter_id, jitter_matrix
-            | apply_jitter // sample_id, jittered_masterlist, orig_idx
+            | apply_jitter // sample_id, joint_id, jittered_masterlist, orig_idx
 
 
-        // sample_id, bg_params_tabix, density_bw, jittered_masterlist, orig_idx
-        merged_data = samples_meta
-            | combine(jittered_masterlists, by: 0)
+        
+        merged_data = samples_meta // sample_id, bg_params_tabix, density_bw
+            | combine(jittered_masterlists, by: 0) // sample_id, bg_params_tabix, density_bw, joint_id, jittered_masterlist, orig_idx
 
         orig_idx = merged_data
-            | map(it -> tuple(it[0], it[4])) // sample_id, orig_idx
+            | map(it -> tuple(it[3], it[5])) // joint_id, orig_idx
 
         density_cols = merged_data
-            | map(it -> tuple(it[3], it[0], it[2])) // masterlist, sample_id, density_bw
+            | map(it -> tuple(it[4], it[3], it[2])) // masterlist, sample_id, density_bw
             | extract_max_density
 
         bg_cols = merged_data
-            | map(it -> tuple(it[3], it[0], it[1])) // masterlist, sample_id, bg_params_tabix
+            | map(it -> tuple(it[4], it[3], it[1])) // masterlist, sample_id, bg_params_tabix
             | extract_bg_mean // sample_id, suffix, np_array
 
         out = bg_cols
