@@ -86,16 +86,24 @@ workflow extractDataWithOffsets {
         out = bg_cols
             | mix(density_cols)
             | combine(orig_idx, by: 0) // sample_id, suffix, np_array, orig_idx
-            | map(it -> tuple(it[1], it[2], it[3])) // suffix, np_array, orig_idx
-            | combine(n_dhs) // suffix, np_array, orig_idx, n_dhs
-            | restore_masterlist_order // suffix, column
+            | combine(n_dhs) // sample_id, suffix, np_array, orig_idx, n_dhs
+            | restore_masterlist_order // sample_id, suffix, column
+            | combine(samples_order.countLines().toInteger()) 
+            | map(
+                it -> tuple(
+                    groupKey(tuple(it[1], it[0].split('-')[1]),
+                    it[3]),
+                    it[2]
+                )
+            )
+            | combine(samples_order) // suffix, columns, samples_order
+            // | generate_matrix
 
             // FIXME make the code work to collect matrices:
-            // | combine(samples_order.countLines().toInteger()) // sample_id, jitter_id, column, n_samples
+            // // sample_id, jitter_id, column, n_samples
             // | map(it -> tuple(groupKey(it[0], it[2]), it[1])) 
             // | groupTuple(by: 0) // suffix, columns
-            // | combine(samples_order) // suffix, columns, samples_order
-            // | generate_matrix
+
     emit:
         out
 }

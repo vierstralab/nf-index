@@ -35,10 +35,10 @@ process restore_masterlist_order {
     tag "${prefix}"
 
     input:
-        tuple val(prefix), path(np_array, name: "input/*"), path(inverse_argsort)
+        tuple val(sample_id), val(prefix), path(np_array, name: "input/*"), path(inverse_argsort)
 
     output:
-        tuple val(prefix), path(name)
+        tuple val(sample_id), val(prefix), path(name)
 
     script:
     name = np_array.name
@@ -246,9 +246,8 @@ process generate_matrix {
             | extract_bg_mean // sample_id, suffix, np_array
             | mix(density_cols)
             | combine(orig_idx, by: 0) // sample_id, suffix, np_array, orig_idx
-            | map(it -> tuple(it[1], it[2], it[3])) // suffix, np_array, orig_idx
-            | combine(n_dhs) // suffix, np_array, orig_idx, n_dhs
-            | restore_masterlist_order
+            | combine(n_dhs) // sample_id, suffix, np_array, orig_idx, n_dhs
+            | restore_masterlist_order // sample_id, suffix, np_array
 
     emit:
         summit_based_cols
@@ -295,7 +294,7 @@ workflow generateMatrices {
                 | map(it -> tuple(it[3], it[8], it[7])) // sample_id, bg_params_tabix, density_bw
                 | join(samples_masterlists), // sample_id, bg_params_tabix, density_bw, summits_masterlist, orig_idx
             n_dhs
-        )
+        ).map(it -> tuple(it[1], it[2]))
 
         out = binary_cols
             | mix(count_cols)
@@ -375,10 +374,10 @@ workflow extractDensityAtSummit {
         | combine(summits_masterlist.map(it -> it[0])) // summits_masterlist
         | map(it -> tuple(it[2], it[0], it[1]))
         | extract_max_density // sample_id, suffix, np_array
-        | map(it -> tuple(it[1], it[2])) // suffix, np_array
-        | combine(summits_masterlist.map(it -> it[1])) // suffix, np_array, orig_idx
-        | combine(n_dhs) // suffix, np_array, orig_idx, n_dhs
-        | restore_masterlist_order
+        | combine(summits_masterlist.map(it -> it[1])) // sample_id, suffix, np_array, orig_idx
+        | combine(n_dhs) // sample_id, suffix, np_array, orig_idx, n_dhs
+        | restore_masterlist_order // sample_id, suffix, np_array
+        | map(it -> tuple(it[1], it[2]))
         | groupTuple()
         | combine(data.map(it -> it[2])) // suffix, columns, samples_order
         | generate_matrix
