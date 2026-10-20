@@ -39,8 +39,8 @@ workflow extractDataWithOffsets {
         data // channel: jitter_id, jitter_matrix, anndata
     main:
         meta = data
-            | map(it -> it[2])
             | first() // anndata should be the same for all entries
+            | map(it -> it[2])
             | extract_meta_from_anndata // masterlist, saf_masterlist, samples_order, samples_meta_file
 
         masterlist = meta
