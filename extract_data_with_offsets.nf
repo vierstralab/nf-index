@@ -90,16 +90,18 @@ workflow extractDataWithOffsets {
             | combine(n_dhs) // joint_id, suffix, np_array, orig_idx, n_dhs
             | restore_masterlist_order // joint_id, suffix, column
             | combine(samples_order.countLines().toInteger()) // joint_id, suffix, column, count
+            | head(2)
+            | view()
             | map(
                 it -> tuple(
-                    groupKey(tuple(it[1], it[0].split('.')[1]), it[3]),
+                    groupKey(tuple(it[1], it[0].split('\.')[1]), it[3]),
                     it[2]
                 )
             ) // suffix, column
-            | groupTuple(by: 0) // suffix, columns
-            | combine(samples_order) // suffix, columns, samples_order
-            | map(it -> tuple("${it[0][1]}.${it[0][0]}", it[1], it[2]))
-            | generate_matrix
+            // | groupTuple(by: 0) // suffix, columns
+            // | combine(samples_order) // suffix, columns, samples_order
+            // | map(it -> tuple("${it[0][1]}.${it[0][0]}", it[1], it[2]))
+            // | generate_matrix
 
     emit:
         out
