@@ -90,7 +90,7 @@ workflow extractDataWithOffsets {
             | combine(n_dhs) // joint_id, suffix, np_array, orig_idx, n_dhs
             | restore_masterlist_order // joint_id, suffix, column
             | combine(samples_order.countLines().toInteger()) // joint_id, suffix, column, count
-            | head(2)
+            | first(2)
             | view()
             | map(
                 it -> tuple(
