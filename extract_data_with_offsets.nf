@@ -94,7 +94,7 @@ workflow extractDataWithOffsets {
             | view()
             | map(
                 it -> tuple(
-                    groupKey(tuple(it[1], it[0].split('\.')[1]), it[3]),
+                    groupKey(tuple(it[1], it[0].split('.')[1]), it[3]),
                     it[2]
                 )
             ) // suffix, column
