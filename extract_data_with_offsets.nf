@@ -18,7 +18,7 @@ process apply_jitter {
         tuple val(sample_id), val(prefix), path(name), path(orig_idx)
 
     script:
-    prefix = "${sample_id}-${jitter_id}"
+    prefix = "${sample_id}.${jitter_id}"
     name = "${prefix}.jittered_masterlist.bed"
     orig_idx = "${prefix}.jittered_masterlist.orig_idx.txt"
     """
@@ -77,29 +77,28 @@ workflow extractDataWithOffsets {
             | map(it -> tuple(it[3], it[5])) // joint_id, orig_idx
 
         density_cols = merged_data
-            | map(it -> tuple(it[4], it[3], it[2])) // masterlist, sample_id, density_bw
+            | map(it -> tuple(it[4], it[3], it[2])) // masterlist, joint_id, density_bw
             | extract_max_density
 
         bg_cols = merged_data
-            | map(it -> tuple(it[4], it[3], it[1])) // masterlist, sample_id, bg_params_tabix
-            | extract_bg_mean // sample_id, suffix, np_array
+            | map(it -> tuple(it[4], it[3], it[1])) // masterlist, joint_id, bg_params_tabix
+            | extract_bg_mean // joint_id, suffix, np_array
 
         out = bg_cols
             | mix(density_cols)
-            | combine(orig_idx, by: 0) // sample_id, suffix, np_array, orig_idx
-            | combine(n_dhs) // sample_id, suffix, np_array, orig_idx, n_dhs
-            | restore_masterlist_order // sample_id, suffix, column
-            | combine(samples_order.countLines().toInteger()) 
+            | combine(orig_idx, by: 0) // joint_id, suffix, np_array, orig_idx
+            | combine(n_dhs) // joint_id, suffix, np_array, orig_idx, n_dhs
+            | restore_masterlist_order // joint_id, suffix, column
+            | combine(samples_order.countLines().toInteger()) // joint_id, suffix, column, count
             | map(
                 it -> tuple(
-                    groupKey(tuple(it[1], it[0].split('-')[1]),
-                    it[3]),
+                    groupKey(tuple(it[1], it[0].split('.')[1]), it[3]),
                     it[2]
                 )
-            )
-            | groupTuple(by: 0)
+            ) // suffix, column
+            | groupTuple(by: 0) // suffix, columns
             | combine(samples_order) // suffix, columns, samples_order
-            | map(it -> tuple("${it[0][0]}-${it[0][1]}", it[1], it[2]))
+            | map(it -> tuple("${it[0][1]}.${it[0][0]}", it[2]))
             | generate_matrix
 
     emit:
