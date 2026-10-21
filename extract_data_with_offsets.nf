@@ -97,7 +97,9 @@ workflow extractDataWithOffsets {
                     it[2]
                 )
             )
+            | groupTuple(by: 0)
             | combine(samples_order) // suffix, columns, samples_order
+            | map(it -> tuple("${it[0][0]}-${it[0][1]}", it[1], it[2]))
             | generate_matrix
 
     emit:
