@@ -92,16 +92,14 @@ workflow extractDataWithOffsets {
             | combine(samples_order.countLines().toInteger()) // joint_id, suffix, column, count
             | map(
                 it -> tuple(
-                    groupKey(tuple(it[1], it[0].split('\\.')[1]), it[3]),
+                    groupKey(tuple(it[0].split('\\.')[1], it[1]), it[3]),
                     it[2]
                 )
             ) // suffix, column
             | groupTuple(by: 0) // suffix, columns
             | combine(samples_order) // suffix, columns, samples_order
-            | take(2)
-            | view()
-            // | map(it -> tuple("${it[0][1]}.${it[0][0]}", it[1], it[2]))
-            // | generate_matrix
+            | map(it -> tuple("${it[0][0]}.${it[0][1]}", it[1], it[2]))
+            | generate_matrix
 
     emit:
         out
