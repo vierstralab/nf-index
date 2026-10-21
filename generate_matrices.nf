@@ -32,7 +32,7 @@ process convert_regions_to_summits {
 process restore_masterlist_order {
 
     conda params.conda
-    tag "${prefix}"
+    tag "${sample_id}:${prefix}"
 
     input:
         tuple val(sample_id), val(prefix), path(np_array, name: "input/*"), path(orig_idx), val(n_dhs)
@@ -41,7 +41,7 @@ process restore_masterlist_order {
         tuple val(sample_id), val(prefix), path(name)
 
     script:
-    name = np_array.name
+    name = np_array.fileName.name
     """
     python3 $moduleDir/bin/helpers/restore_masterlist_order.py \
         ${np_array} \
