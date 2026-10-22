@@ -2,7 +2,8 @@ import anndata as ad
 import sys
 import pandas as pd
 import numpy as np
-from helpers import convert_to_sparse_if_sufficently_sparse, load_from_file
+from genome_tools.data.anndata import convert_to_sparse_if_sufficiently_sparse
+from genome_tools.helpers import load_from_file
 import scipy.sparse as sp
 
 def main(rows_meta, cols_meta, matrix):
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     samples_order = np.loadtxt(sys.argv[2], dtype=str)
     
     matrix = load_from_file(sys.argv[3]).T
-    matrix = convert_to_sparse_if_sufficently_sparse(matrix)
+    matrix = convert_to_sparse_if_sufficiently_sparse(matrix)
 
     peaks_column = sys.argv[5]
     samples_meta = pd.read_table(sys.argv[4]).set_index('sample_id').loc[

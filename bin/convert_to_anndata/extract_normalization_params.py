@@ -2,9 +2,7 @@ import numpy as np
 import sys
 import base64
 import json
-from genome_tools.data.anndata import read_zarr_backed
-
-from helpers import get_mask_from_column_name
+from genome_tools.data.anndata import read_zarr_backed, get_mask_from_column_name
 
 
 class NpEncoder(json.JSONEncoder):

@@ -64,8 +64,8 @@ process add_matrices_to_anndata {
     """
     python3 $moduleDir/bin/convert_to_anndata/matrices_data_to_anndata.py \
         ${index_anndata} \
-        ${params.samples_file} \
         ${name} \
+        --samples_meta ${params.samples_file} \
         ${matrices}
     """
 }
